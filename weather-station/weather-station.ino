@@ -24,24 +24,19 @@ void loop() {
   float pressure = bme.readPressure() / 100.0F;
   float humidity = bme.readHumidity();
   float alt = bme.readAltitude(SEALEVELPRESSURE_HPA);
-  
-  Serial.print("Temperature: ");
-  Serial.print(temperature);
-  Serial.println("C");
 
-  Serial.print("Pressure: ");
-  Serial.print(pressure);
-  Serial.println("hPa");
-
-  Serial.print("Humidity: ");
-  Serial.print(humidity);
-  Serial.println("%");
-
-  Serial.print("Altitude: ");
-  Serial.print(alt);
-  Serial.println("m");
-
+  FormattedPrint("Temperature", temperature, "C");
+  FormattedPrint("Pressure", pressure, "hPa");
+  FormattedPrint("Humidity", humidity, "%");
+  FormattedPrint("Altitude", alt, "m");
 
   Serial.println("----------------------------");
   delay(2000);
+}
+
+void FormattedPrint(String prop, float value, String valUnit) {
+  Serial.print(prop);
+  Serial.print(": ");
+  Serial.print(value);
+  Serial.println(valUnit);
 }
