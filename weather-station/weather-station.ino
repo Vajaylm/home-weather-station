@@ -7,6 +7,8 @@
 RTC_DS1307 rtc;
 Adafruit_BME280 bme;
 
+int SAMPLING_TIME = 5000; //ms
+
 void setup() {
   Serial.begin(9600);
   
@@ -23,6 +25,8 @@ void setup() {
 }
 
 void loop() {
+  long startTime = millis();
+  
   DateTime now = rtc.now();
   DatePrint(now);
   TimePrint(now);
@@ -30,13 +34,12 @@ void loop() {
   float temperature = bme.readTemperature();
   float pressure = bme.readPressure() / 100.0F;
   float humidity = bme.readHumidity();
-  
   FormattedDataPrint("Temperature", temperature, "C");
   FormattedDataPrint("Pressure", pressure, "hPa");
   FormattedDataPrint("Humidity", humidity, "%");
-  
   Serial.println("----------------------------");
-  delay(2000);
+  
+  delay(startTime + SAMPLING_TIME - millis());
 }
 
 void FormattedDataPrint(String prop, float value, String valUnit) {
