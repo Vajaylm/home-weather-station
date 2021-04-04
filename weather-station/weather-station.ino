@@ -49,16 +49,20 @@ void FormattedDataPrint(String prop, float value, String valUnit) {
 void DatePrint(DateTime actDateTime) {
   Serial.print(actDateTime.year(), DEC);
   Serial.print('.');
-  Serial.print(actDateTime.month(), DEC);
+  Serial.print(TwoDigitFormatter(actDateTime.month()));
   Serial.print('.');
-  Serial.println(actDateTime.day(), DEC);
+  Serial.println(TwoDigitFormatter(actDateTime.day()));
 }
 
 void TimePrint(DateTime actDateTime) {
-  Serial.print(actDateTime.hour(), DEC);
+  Serial.print(TwoDigitFormatter(actDateTime.hour()));
   Serial.print(':');
-  Serial.print(actDateTime.minute(), DEC);
+  Serial.print(TwoDigitFormatter(actDateTime.minute()));
   Serial.print(':');
-  Serial.print(actDateTime.second(), DEC);
+  Serial.print(TwoDigitFormatter(actDateTime.second()));  
   Serial.println();
+}
+
+String TwoDigitFormatter(int value) {
+  return value < 10 ? "0" + String(value) : String(value);
 }
