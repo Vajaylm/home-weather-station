@@ -4,9 +4,32 @@
 #include <ArduinoOTA.h>
 #include "AuthOTA.h"
 
+#include <Wire.h>
+#include <RTClib.h>
+#include <Adafruit_Sensor.h>
+#include <Adafruit_BME280.h>
+
+RTC_DS1307 rtc;
+Adafruit_BME280 bme;
+
+int SAMPLING_TIME = 5000; //ms
+
 void setup() {  
   Serial.begin(115200);
   Serial.println("Booting");
+  Wire.begin(D2, D1); // D1 - SCL, D2 - SDA
+  
+  rtc.begin();
+  if (!rtc.isrunning()) {
+    Serial.println("RTC is NOT running!");
+    rtc.adjust(DateTime(__DATE__, __TIME__));
+  }
+  
+  if (!bme.begin(0x76)) {
+    Serial.println("Could not find BME280 sensor!");
+    while (true);
+  }
+
   WiFi.mode(WIFI_STA);
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
   
@@ -60,31 +83,8 @@ void loop() {
 
 
 
-//#include <RTClib.h>
-//
-//#include <Wire.h>
-//#include <Adafruit_Sensor.h>
-//#include <Adafruit_BME280.h>
-//
-//RTC_DS1307 rtc;
-//Adafruit_BME280 bme;
-//
-//int SAMPLING_TIME = 5000; //ms
-//
-//void setup() {
-//  Serial.begin(9600);
-//  
-//  rtc.begin();
-//  if (!rtc.isrunning()) {
-//    Serial.println("RTC is NOT running!");
-//    rtc.adjust(DateTime(__DATE__, __TIME__));
-//  }
-//  
-//  if (!bme.begin(0x76)) {
-//    Serial.println("Could not find BME280 sensor!");
-//    while (true);
-//  }
-//}
+
+
 //
 //void loop() {
 //  long startTime = millis();
