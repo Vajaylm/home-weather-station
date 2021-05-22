@@ -45,6 +45,9 @@ void setup() {
     ESP.restart();
   }
 
+  ArduinoOTA.setHostname(HOST_NAME);
+  ArduinoOTA.setPassword(HOST_PASSWORD);
+  
   ArduinoOTA.onStart([]() {
     String type;
     if (ArduinoOTA.getCommand() == U_FLASH) {
