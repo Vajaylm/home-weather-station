@@ -1,17 +1,23 @@
+// Over The Air upload related
 #include <ESP8266WiFi.h>
 #include <ESP8266mDNS.h>
 #include <WiFiUdp.h>
 #include <ArduinoOTA.h>
 #include "AuthOTA.h"
 
+// I2C related
 #include <Wire.h>
 #include <RTClib.h>
 #include <Adafruit_Sensor.h>
 #include <Adafruit_BME280.h>
 
+// Instance creation
 RTC_DS1307 rtc;
 Adafruit_BME280 bme;
 
+// Global variables
+bool rtcRunning = true;
+bool bmeRunning = true;
 int SAMPLING_TIME = 5000; //ms
 
 void setup() {
@@ -96,6 +102,7 @@ void loop() {
   ArduinoOTA.handle();
 }
 
+// Formatted print for showing data as "Prop: ValueUnit"
 void FormattedDataPrint(String prop, float value, String valUnit) {
   Serial.print(prop);
   Serial.print(": ");
@@ -103,6 +110,7 @@ void FormattedDataPrint(String prop, float value, String valUnit) {
   Serial.println(valUnit);
 }
 
+// Formatted print for showing date as "YYYY.MM.DD"
 void DatePrint(DateTime actDateTime) {
   Serial.print(actDateTime.year(), DEC);
   Serial.print('.');
@@ -111,6 +119,7 @@ void DatePrint(DateTime actDateTime) {
   Serial.println(TwoDigitFormatter(actDateTime.day()));
 }
 
+// Formatted print for showing time as "HH:MM:SS"
 void TimePrint(DateTime actDateTime) {
   Serial.print(TwoDigitFormatter(actDateTime.hour()));
   Serial.print(':');
