@@ -22,7 +22,7 @@ LiquidCrystal_I2C lcd(0x27, 20, 4);
 #define I2C_PRINT 100001
 bool rtcRunning = true;
 bool bmeRunning = true;
-int SAMPLING_TIME = 5000; //ms
+int refresh_time = 1000; //ms
 
 void setup() {
   Serial.begin(115200);
@@ -103,6 +103,7 @@ void loop() {
     TimePrint(now, SERIAL_PRINT);
     lcd.setCursor(0, 0);
     DatePrint(now, I2C_PRINT);
+    lcd.print("  ");
     TimePrint(now, I2C_PRINT);
   }
 
@@ -119,7 +120,7 @@ void loop() {
     FormattedDataPrint("Humidity", humidity, "%", I2C_PRINT);  
   }
     
-  delay(startTime + SAMPLING_TIME - millis());
+  delay(startTime + refresh_time - millis());
   
   ArduinoOTA.handle();
 }
@@ -166,7 +167,11 @@ void TimePrint(DateTime actDateTime, int printMode) {
     Serial.println();
   }
   else if (printMode == I2C_PRINT) {
-    
+    lcd.print(TwoDigitFormatter(actDateTime.hour()));
+    lcd.print(':');
+    lcd.print(TwoDigitFormatter(actDateTime.minute()));
+    lcd.print(':');
+    lcd.print(TwoDigitFormatter(actDateTime.second()));
   }
 }
 
