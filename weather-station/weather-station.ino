@@ -4,6 +4,7 @@
 #include <WiFiUdp.h>
 #include <ArduinoOTA.h>
 #include "AuthOTA.h"
+#include "Animation.h"
 
 // I2C related
 #include <Wire.h>
@@ -28,6 +29,8 @@ int actCycle = samplingCycle;
 float temperature = 0.0;
 float pressure = 0.0;
 float humidity = 0.0;
+
+
 
 void setup() {
   Serial.begin(115200);
@@ -100,7 +103,7 @@ void setup() {
 
 void loop() {
   long startTime = millis();
-
+  
   if (rtcRunning) {
     DateTime now = rtc.now();
     DatePrint(now, SERIAL_PRINT);
@@ -113,7 +116,7 @@ void loop() {
   
   if (bmeRunning) {
     if (actCycle == samplingCycle) {
-      actCycle = 0;
+      //actCycle = 0;
       temperature = bme.readTemperature();
       pressure = bme.readPressure() / 100.0F;
       humidity = bme.readHumidity();
@@ -128,11 +131,29 @@ void loop() {
     FormattedDataPrint("h", humidity, "%", I2C_PRINT);
     lcd.setCursor(0, 2);
     FormattedDataPrint("p", pressure, "hPa", I2C_PRINT);
+    lcd.print(" ");
   }
-    
+
+  byte humAnimId = 0;
+  lcd.createChar(humAnimId, humAnim[actCycle]);
+  
+  lcd.setCursor(2, 3);
+  lcd.write(humAnimId);
+
+  byte fanAnimId = 1;
+  lcd.createChar(fanAnimId, fanAnim[actCycle % 3]);
+  
+  lcd.setCursor(5, 3);
+  lcd.write(fanAnimId);
+
   delay(startTime + refresh_time - millis());
   ArduinoOTA.handle();
-  actCycle++;
+  if (actCycle == samplingCycle) {
+    actCycle = 0;
+  }
+  else {
+    actCycle++;  
+  }
 }
 
 // Formatted print for showing data as "Prop: ValueUnit"
