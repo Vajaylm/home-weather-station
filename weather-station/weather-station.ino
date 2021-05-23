@@ -23,12 +23,17 @@ LiquidCrystal_I2C lcd(0x27, 20, 4);
 bool rtcRunning = true;
 bool bmeRunning = true;
 int refresh_time = 1000; //ms
+int samplingCycle = 5;
+int actCycle = samplingCycle;
+float temperature = 0.0;
+float pressure = 0.0;
+float humidity = 0.0;
 
 void setup() {
   Serial.begin(115200);
   Serial.println("Booting");
   Wire.begin(D2, D1); // D1 - SCL, D2 - SDA
-  
+
   rtc.begin();
   if (!rtc.isrunning()) {
     Serial.println("RTC is NOT running!");
@@ -96,7 +101,7 @@ void setup() {
 void loop() {
   long startTime = millis();
   lcd.clear();
-  
+
   if (rtcRunning) {
     DateTime now = rtc.now();
     DatePrint(now, SERIAL_PRINT);
@@ -106,11 +111,14 @@ void loop() {
     lcd.print("  ");
     TimePrint(now, I2C_PRINT);
   }
-
+  
   if (bmeRunning) {
-    float temperature = bme.readTemperature();
-    float pressure = bme.readPressure() / 100.0F;
-    float humidity = bme.readHumidity();
+    if (actCycle == samplingCycle) {
+      actCycle = 0;
+      temperature = bme.readTemperature();
+      pressure = bme.readPressure() / 100.0F;
+      humidity = bme.readHumidity();
+    }
     FormattedDataPrint("Temperature", temperature, "C", SERIAL_PRINT);
     FormattedDataPrint("Pressure", pressure, "hPa", SERIAL_PRINT);
     FormattedDataPrint("Humidity", humidity, "%", SERIAL_PRINT);
@@ -124,8 +132,8 @@ void loop() {
   }
     
   delay(startTime + refresh_time - millis());
-  
   ArduinoOTA.handle();
+  actCycle++;
 }
 
 // Formatted print for showing data as "Prop: ValueUnit"
