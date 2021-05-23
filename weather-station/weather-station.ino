@@ -30,6 +30,8 @@ float temperature = 0.0;
 float pressure = 0.0;
 float humidity = 0.0;
 byte humidifierRelayPin = D5;
+float humidityThresholdLow = 30.0;
+float humidityThresholdHigh = 60.0;
 
 
 void setup() {
@@ -148,11 +150,11 @@ void loop() {
   lcd.setCursor(5, 3);
   lcd.write(fanAnimId);
 
-  if (actCycle % 2 == 0) {
+  if (humidity <= humidityThresholdLow && digitalRead(humidifierRelayPin) == HIGH) {
     digitalWrite(humidifierRelayPin, LOW);
   }
-  else {
-    digitalWrite(humidifierRelayPin, HIGH);  
+  else if (humidity >= humidityThresholdHigh && digitalRead(humidifierRelayPin) == LOW) {
+    digitalWrite(humidifierRelayPin, HIGH);
   }
   
   ArduinoOTA.handle();
