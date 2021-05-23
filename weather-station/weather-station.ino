@@ -28,12 +28,13 @@ void setup() {
   rtc.begin();
   if (!rtc.isrunning()) {
     Serial.println("RTC is NOT running!");
+    rtcRunning = false;
     rtc.adjust(DateTime(__DATE__, __TIME__));
   }
   
   if (!bme.begin(0x76)) {
     Serial.println("Could not find BME280 sensor!");
-    while (true);
+    bmeRunning = false;
   }
 
   WiFi.mode(WIFI_STA);
@@ -87,19 +88,23 @@ void setup() {
 
 void loop() {
   long startTime = millis();
-  
-  DateTime now = rtc.now();
-  DatePrint(now);
-  TimePrint(now);
 
-  float temperature = bme.readTemperature();
-  float pressure = bme.readPressure() / 100.0F;
-  float humidity = bme.readHumidity();
-  FormattedDataPrint("Temperature", temperature, "C");
-  FormattedDataPrint("Pressure", pressure, "hPa");
-  FormattedDataPrint("Humidity", humidity, "%");
-  Serial.println("----------------------------");
-  
+  if (rtcRunning) {
+    DateTime now = rtc.now();
+    DatePrint(now);
+    TimePrint(now);  
+  }
+
+  if (bmeRunning) {
+    float temperature = bme.readTemperature();
+    float pressure = bme.readPressure() / 100.0F;
+    float humidity = bme.readHumidity();
+    FormattedDataPrint("Temperature", temperature, "C");
+    FormattedDataPrint("Pressure", pressure, "hPa");
+    FormattedDataPrint("Humidity", humidity, "%");
+    Serial.println("----------------------------");  
+  }
+    
   delay(startTime + SAMPLING_TIME - millis());
   
   ArduinoOTA.handle();
