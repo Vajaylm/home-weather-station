@@ -138,12 +138,6 @@ void loop() {
     lcd.print(" ");
   }
 
-  byte humAnimId = 0;
-  lcd.createChar(humAnimId, humAnim[actCycle]);
-  
-  lcd.setCursor(2, 3);
-  lcd.write(humAnimId);
-
   byte fanAnimId = 1;
   lcd.createChar(fanAnimId, fanAnim[actCycle % 3]);
   
@@ -152,9 +146,16 @@ void loop() {
 
   if (humidity <= humidityThresholdLow && digitalRead(humidifierRelayPin) == HIGH) {
     digitalWrite(humidifierRelayPin, LOW);
+    byte humAnimId = 0;
+    lcd.createChar(humAnimId, humAnim[actCycle]);
+  
+    lcd.setCursor(2, 3);
+    lcd.write(humAnimId);
   }
   else if (humidity >= humidityThresholdHigh && digitalRead(humidifierRelayPin) == LOW) {
     digitalWrite(humidifierRelayPin, HIGH);
+    lcd.setCursor(2, 3);
+    lcd.print(" ");
   }
   
   ArduinoOTA.handle();
