@@ -4,38 +4,54 @@
 #include <WiFiUdp.h>
 #include <ArduinoOTA.h>
 #include "AuthOTA.h"
+#include "Animation.h"
 
 // I2C related
 #include <Wire.h>
 #include <RTClib.h>
 #include <Adafruit_Sensor.h>
 #include <Adafruit_BME280.h>
+#include <LiquidCrystal_I2C.h>
 
 // Instance creation
 RTC_DS1307 rtc;
 Adafruit_BME280 bme;
+LiquidCrystal_I2C lcd(0x27, 20, 4); 
 
 // Global variables
+#define SERIAL_PRINT 100000
+#define I2C_PRINT 100001
 bool rtcRunning = true;
 bool bmeRunning = true;
-int SAMPLING_TIME = 5000; //ms
+int refresh_time = 1000; //ms
+int samplingCycle = 5;
+int actCycle = samplingCycle;
+float temperature = 0.0;
+float pressure = 0.0;
+float humidity = 0.0;
+
+
 
 void setup() {
   Serial.begin(115200);
   Serial.println("Booting");
   Wire.begin(D2, D1); // D1 - SCL, D2 - SDA
-  
+
   rtc.begin();
   if (!rtc.isrunning()) {
     Serial.println("RTC is NOT running!");
+    rtcRunning = false;
     rtc.adjust(DateTime(__DATE__, __TIME__));
   }
   
   if (!bme.begin(0x76)) {
     Serial.println("Could not find BME280 sensor!");
-    while (true);
+    bmeRunning = false;
   }
 
+  lcd.init();
+  lcd.backlight();
+  
   WiFi.mode(WIFI_STA);
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
   
@@ -88,48 +104,109 @@ void setup() {
 void loop() {
   long startTime = millis();
   
-  DateTime now = rtc.now();
-  DatePrint(now);
-  TimePrint(now);
+  if (rtcRunning) {
+    DateTime now = rtc.now();
+    DatePrint(now, SERIAL_PRINT);
+    TimePrint(now, SERIAL_PRINT);
+    lcd.setCursor(0, 0);
+    DatePrint(now, I2C_PRINT);
+    lcd.print("  ");
+    TimePrint(now, I2C_PRINT);
+  }
+  
+  if (bmeRunning) {
+    if (actCycle == samplingCycle) {
+      //actCycle = 0;
+      temperature = bme.readTemperature();
+      pressure = bme.readPressure() / 100.0F;
+      humidity = bme.readHumidity();
+    }
+    FormattedDataPrint("Temperature", temperature, "C", SERIAL_PRINT);
+    FormattedDataPrint("Pressure", pressure, "hPa", SERIAL_PRINT);
+    FormattedDataPrint("Humidity", humidity, "%", SERIAL_PRINT);
+    Serial.println("----------------------------");
+    lcd.setCursor(0, 1);
+    FormattedDataPrint("T", temperature, "C", I2C_PRINT);
+    lcd.print("  ");
+    FormattedDataPrint("h", humidity, "%", I2C_PRINT);
+    lcd.setCursor(0, 2);
+    FormattedDataPrint("p", pressure, "hPa", I2C_PRINT);
+    lcd.print(" ");
+  }
 
-  float temperature = bme.readTemperature();
-  float pressure = bme.readPressure() / 100.0F;
-  float humidity = bme.readHumidity();
-  FormattedDataPrint("Temperature", temperature, "C");
-  FormattedDataPrint("Pressure", pressure, "hPa");
-  FormattedDataPrint("Humidity", humidity, "%");
-  Serial.println("----------------------------");
+  byte humAnimId = 0;
+  lcd.createChar(humAnimId, humAnim[actCycle]);
   
-  delay(startTime + SAMPLING_TIME - millis());
+  lcd.setCursor(2, 3);
+  lcd.write(humAnimId);
+
+  byte fanAnimId = 1;
+  lcd.createChar(fanAnimId, fanAnim[actCycle % 3]);
   
+  lcd.setCursor(5, 3);
+  lcd.write(fanAnimId);
+
+  delay(startTime + refresh_time - millis());
   ArduinoOTA.handle();
+  if (actCycle == samplingCycle) {
+    actCycle = 0;
+  }
+  else {
+    actCycle++;  
+  }
 }
 
 // Formatted print for showing data as "Prop: ValueUnit"
-void FormattedDataPrint(String prop, float value, String valUnit) {
-  Serial.print(prop);
-  Serial.print(": ");
-  Serial.print(value);
-  Serial.println(valUnit);
+void FormattedDataPrint(String prop, float value, String valUnit, int printMode) {
+  if (printMode == SERIAL_PRINT) {
+    Serial.print(prop);
+    Serial.print(": ");
+    Serial.print(value);
+    Serial.println(valUnit);
+  }
+  else if (printMode == I2C_PRINT) {
+    lcd.print(prop);
+    lcd.print(": ");
+    lcd.print(value);
+    lcd.print(valUnit);
+  }
 }
 
 // Formatted print for showing date as "YYYY.MM.DD"
-void DatePrint(DateTime actDateTime) {
-  Serial.print(actDateTime.year(), DEC);
-  Serial.print('.');
-  Serial.print(TwoDigitFormatter(actDateTime.month()));
-  Serial.print('.');
-  Serial.println(TwoDigitFormatter(actDateTime.day()));
+void DatePrint(DateTime actDateTime, int printMode) {
+  if (printMode == SERIAL_PRINT) {
+    Serial.print(actDateTime.year(), DEC);
+    Serial.print('.');
+    Serial.print(TwoDigitFormatter(actDateTime.month()));
+    Serial.print('.');
+    Serial.println(TwoDigitFormatter(actDateTime.day()));
+  }
+  else if (printMode == I2C_PRINT) {
+    lcd.print(actDateTime.year(), DEC);
+    lcd.print('.');
+    lcd.print(TwoDigitFormatter(actDateTime.month()));
+    lcd.print('.');
+    lcd.print(TwoDigitFormatter(actDateTime.day()));
+  }
 }
 
 // Formatted print for showing time as "HH:MM:SS"
-void TimePrint(DateTime actDateTime) {
-  Serial.print(TwoDigitFormatter(actDateTime.hour()));
-  Serial.print(':');
-  Serial.print(TwoDigitFormatter(actDateTime.minute()));
-  Serial.print(':');
-  Serial.print(TwoDigitFormatter(actDateTime.second()));  
-  Serial.println();
+void TimePrint(DateTime actDateTime, int printMode) {
+  if (printMode == SERIAL_PRINT) {
+    Serial.print(TwoDigitFormatter(actDateTime.hour()));
+    Serial.print(':');
+    Serial.print(TwoDigitFormatter(actDateTime.minute()));
+    Serial.print(':');
+    Serial.print(TwoDigitFormatter(actDateTime.second()));  
+    Serial.println();
+  }
+  else if (printMode == I2C_PRINT) {
+    lcd.print(TwoDigitFormatter(actDateTime.hour()));
+    lcd.print(':');
+    lcd.print(TwoDigitFormatter(actDateTime.minute()));
+    lcd.print(':');
+    lcd.print(TwoDigitFormatter(actDateTime.second()));
+  }
 }
 
 String TwoDigitFormatter(int value) {
