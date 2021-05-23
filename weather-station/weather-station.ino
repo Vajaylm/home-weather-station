@@ -43,7 +43,6 @@ void setup() {
 
   lcd.init();
   lcd.backlight();
-  lcd.print("Hello, World");
   
   WiFi.mode(WIFI_STA);
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
@@ -96,11 +95,13 @@ void setup() {
 
 void loop() {
   long startTime = millis();
-
+  lcd.clear();
+  
   if (rtcRunning) {
     DateTime now = rtc.now();
     DatePrint(now, SERIAL_PRINT);
     TimePrint(now, SERIAL_PRINT);
+    lcd.setCursor(0, 0);
     DatePrint(now, I2C_PRINT);
     TimePrint(now, I2C_PRINT);
   }
@@ -146,7 +147,11 @@ void DatePrint(DateTime actDateTime, int printMode) {
     Serial.println(TwoDigitFormatter(actDateTime.day()));
   }
   else if (printMode == I2C_PRINT) {
-    
+    lcd.print(actDateTime.year(), DEC);
+    lcd.print('.');
+    lcd.print(TwoDigitFormatter(actDateTime.month()));
+    lcd.print('.');
+    lcd.print(TwoDigitFormatter(actDateTime.day()));
   }
 }
 
