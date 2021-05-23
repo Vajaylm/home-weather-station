@@ -29,7 +29,7 @@ int actCycle = samplingCycle;
 float temperature = 0.0;
 float pressure = 0.0;
 float humidity = 0.0;
-
+byte humidifierRelayPin = D5;
 
 
 void setup() {
@@ -99,6 +99,8 @@ void setup() {
   Serial.println("Ready");
   Serial.print("IP address: ");
   Serial.println(WiFi.localIP());
+
+  pinMode(humidifierRelayPin, OUTPUT);
 }
 
 void loop() {
@@ -146,14 +148,22 @@ void loop() {
   lcd.setCursor(5, 3);
   lcd.write(fanAnimId);
 
-  delay(startTime + refresh_time - millis());
+  if (actCycle % 2 == 0) {
+    digitalWrite(humidifierRelayPin, LOW);
+  }
+  else {
+    digitalWrite(humidifierRelayPin, HIGH);  
+  }
+  
   ArduinoOTA.handle();
   if (actCycle == samplingCycle) {
     actCycle = 0;
   }
   else {
-    actCycle++;  
+    actCycle++;
   }
+  delay(startTime + refresh_time - millis());
+  
 }
 
 // Formatted print for showing data as "Prop: ValueUnit"
