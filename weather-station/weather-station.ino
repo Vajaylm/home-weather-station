@@ -115,9 +115,12 @@ void loop() {
     FormattedDataPrint("Pressure", pressure, "hPa", SERIAL_PRINT);
     FormattedDataPrint("Humidity", humidity, "%", SERIAL_PRINT);
     Serial.println("----------------------------");
-    FormattedDataPrint("Temperature", temperature, "C", I2C_PRINT);
-    FormattedDataPrint("Pressure", pressure, "hPa", I2C_PRINT);
-    FormattedDataPrint("Humidity", humidity, "%", I2C_PRINT);  
+    lcd.setCursor(0, 1);
+    FormattedDataPrint("T", temperature, "C", I2C_PRINT);
+    lcd.print("  ");
+    FormattedDataPrint("h", humidity, "%", I2C_PRINT);
+    lcd.setCursor(0, 2);
+    FormattedDataPrint("p", pressure, "hPa", I2C_PRINT);
   }
     
   delay(startTime + refresh_time - millis());
@@ -134,7 +137,10 @@ void FormattedDataPrint(String prop, float value, String valUnit, int printMode)
     Serial.println(valUnit);
   }
   else if (printMode == I2C_PRINT) {
-    
+    lcd.print(prop);
+    lcd.print(": ");
+    lcd.print(value);
+    lcd.print(valUnit);
   }
 }
 
