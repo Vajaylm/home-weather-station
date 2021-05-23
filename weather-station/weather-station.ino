@@ -10,10 +10,12 @@
 #include <RTClib.h>
 #include <Adafruit_Sensor.h>
 #include <Adafruit_BME280.h>
+#include <LiquidCrystal_I2C.h>
 
 // Instance creation
 RTC_DS1307 rtc;
 Adafruit_BME280 bme;
+LiquidCrystal_I2C lcd(0x27, 20, 4); 
 
 // Global variables
 #define SERIAL_PRINT 100000
@@ -39,6 +41,10 @@ void setup() {
     bmeRunning = false;
   }
 
+  lcd.init();
+  lcd.backlight();
+  lcd.print("Hello, World");
+  
   WiFi.mode(WIFI_STA);
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
   
