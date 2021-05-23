@@ -100,7 +100,6 @@ void setup() {
 
 void loop() {
   long startTime = millis();
-  lcd.clear();
 
   if (rtcRunning) {
     DateTime now = rtc.now();
