@@ -16,6 +16,8 @@ RTC_DS1307 rtc;
 Adafruit_BME280 bme;
 
 // Global variables
+#define SERIAL_PRINT 100000
+#define I2C_PRINT 100001
 bool rtcRunning = true;
 bool bmeRunning = true;
 int SAMPLING_TIME = 5000; //ms
@@ -91,18 +93,23 @@ void loop() {
 
   if (rtcRunning) {
     DateTime now = rtc.now();
-    DatePrint(now);
-    TimePrint(now);  
+    DatePrint(now, SERIAL_PRINT);
+    TimePrint(now, SERIAL_PRINT);
+    DatePrint(now, I2C_PRINT);
+    TimePrint(now, I2C_PRINT);
   }
 
   if (bmeRunning) {
     float temperature = bme.readTemperature();
     float pressure = bme.readPressure() / 100.0F;
     float humidity = bme.readHumidity();
-    FormattedDataPrint("Temperature", temperature, "C");
-    FormattedDataPrint("Pressure", pressure, "hPa");
-    FormattedDataPrint("Humidity", humidity, "%");
-    Serial.println("----------------------------");  
+    FormattedDataPrint("Temperature", temperature, "C", SERIAL_PRINT);
+    FormattedDataPrint("Pressure", pressure, "hPa", SERIAL_PRINT);
+    FormattedDataPrint("Humidity", humidity, "%", SERIAL_PRINT);
+    Serial.println("----------------------------");
+    FormattedDataPrint("Temperature", temperature, "C", I2C_PRINT);
+    FormattedDataPrint("Pressure", pressure, "hPa", I2C_PRINT);
+    FormattedDataPrint("Humidity", humidity, "%", I2C_PRINT);  
   }
     
   delay(startTime + SAMPLING_TIME - millis());
@@ -111,30 +118,45 @@ void loop() {
 }
 
 // Formatted print for showing data as "Prop: ValueUnit"
-void FormattedDataPrint(String prop, float value, String valUnit) {
-  Serial.print(prop);
-  Serial.print(": ");
-  Serial.print(value);
-  Serial.println(valUnit);
+void FormattedDataPrint(String prop, float value, String valUnit, int printMode) {
+  if (printMode == SERIAL_PRINT) {
+    Serial.print(prop);
+    Serial.print(": ");
+    Serial.print(value);
+    Serial.println(valUnit);
+  }
+  else if (printMode == I2C_PRINT) {
+    
+  }
 }
 
 // Formatted print for showing date as "YYYY.MM.DD"
-void DatePrint(DateTime actDateTime) {
-  Serial.print(actDateTime.year(), DEC);
-  Serial.print('.');
-  Serial.print(TwoDigitFormatter(actDateTime.month()));
-  Serial.print('.');
-  Serial.println(TwoDigitFormatter(actDateTime.day()));
+void DatePrint(DateTime actDateTime, int printMode) {
+  if (printMode == SERIAL_PRINT) {
+    Serial.print(actDateTime.year(), DEC);
+    Serial.print('.');
+    Serial.print(TwoDigitFormatter(actDateTime.month()));
+    Serial.print('.');
+    Serial.println(TwoDigitFormatter(actDateTime.day()));
+  }
+  else if (printMode == I2C_PRINT) {
+    
+  }
 }
 
 // Formatted print for showing time as "HH:MM:SS"
-void TimePrint(DateTime actDateTime) {
-  Serial.print(TwoDigitFormatter(actDateTime.hour()));
-  Serial.print(':');
-  Serial.print(TwoDigitFormatter(actDateTime.minute()));
-  Serial.print(':');
-  Serial.print(TwoDigitFormatter(actDateTime.second()));  
-  Serial.println();
+void TimePrint(DateTime actDateTime, int printMode) {
+  if (printMode == SERIAL_PRINT) {
+    Serial.print(TwoDigitFormatter(actDateTime.hour()));
+    Serial.print(':');
+    Serial.print(TwoDigitFormatter(actDateTime.minute()));
+    Serial.print(':');
+    Serial.print(TwoDigitFormatter(actDateTime.second()));  
+    Serial.println();
+  }
+  else if (printMode == I2C_PRINT) {
+    
+  }
 }
 
 String TwoDigitFormatter(int value) {
