@@ -144,29 +144,39 @@ void loop() {
     lcd.print(" ");
   }
 
-  if (humidity <= humidityThresholdLow && digitalRead(humidifierRelayPin) == HIGH) {
-    digitalWrite(humidifierRelayPin, LOW);
+  if (humidity <= humidityThresholdLow) {
+    // Turn on humidifier
+    if (digitalRead(humidifierRelayPin) == HIGH) {
+      digitalWrite(humidifierRelayPin, LOW);  
+    }
+
+    // Animation for humidifier
     byte humAnimId = 0;
     lcd.createChar(humAnimId, humAnim[actCycle]);
-  
     lcd.setCursor(2, 3);
     lcd.write(humAnimId);
   }
   else if (humidity >= humidityThresholdHigh && digitalRead(humidifierRelayPin) == LOW) {
+    // Turn off humidifier, clear animation position on LCD
     digitalWrite(humidifierRelayPin, HIGH);
     lcd.setCursor(2, 3);
     lcd.print(" ");
   }
 
-  if (temperature >= temperatureThresholdHigh && digitalRead(fanRelayPin) == HIGH) {
-    digitalWrite(fanRelayPin, LOW);
+  if (temperature >= temperatureThresholdHigh) {
+    // Turn on fan
+    if (digitalRead(fanRelayPin) == HIGH) {
+      digitalWrite(fanRelayPin, LOW);  
+    }
+    
+    // Animation for fan
     byte fanAnimId = 1;
     lcd.createChar(fanAnimId, fanAnim[actCycle % 3]);
-  
     lcd.setCursor(5, 3);
     lcd.write(fanAnimId);
   }
   else if (temperature <= temperatureThresholdLow && digitalRead(fanRelayPin) == LOW) {
+    // Turn off fan, clear animation position on LCD
     digitalWrite(fanRelayPin, HIGH);
     lcd.setCursor(5, 3);
     lcd.print(" ");
