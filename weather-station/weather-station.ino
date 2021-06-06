@@ -32,9 +32,14 @@ float humidity = 0.0;
 byte humidifierRelayPin = D5;
 float humidityThresholdLow = 30.0;
 float humidityThresholdHigh = 60.0;
-
+byte fanRelayPin = D6;
 
 void setup() {
+  pinMode(humidifierRelayPin, OUTPUT);
+  digitalWrite(humidifierRelayPin, HIGH);
+  pinMode(fanRelayPin, OUTPUT);
+  digitalWrite(fanRelayPin, HIGH);
+  
   Serial.begin(115200);
   Serial.println("Booting");
   Wire.begin(D2, D1); // D1 - SCL, D2 - SDA
@@ -101,8 +106,6 @@ void setup() {
   Serial.println("Ready");
   Serial.print("IP address: ");
   Serial.println(WiFi.localIP());
-
-  pinMode(humidifierRelayPin, OUTPUT);
 }
 
 void loop() {
