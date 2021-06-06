@@ -33,6 +33,9 @@ byte humidifierRelayPin = D5;
 float humidityThresholdLow = 30.0;
 float humidityThresholdHigh = 60.0;
 byte fanRelayPin = D6;
+float temperatureThresholdLow = 22.0;
+float temperatureThresholdHigh = 25.0;
+
 
 void setup() {
   pinMode(humidifierRelayPin, OUTPUT);
@@ -141,12 +144,6 @@ void loop() {
     lcd.print(" ");
   }
 
-  byte fanAnimId = 1;
-  lcd.createChar(fanAnimId, fanAnim[actCycle % 3]);
-  
-  lcd.setCursor(5, 3);
-  lcd.write(fanAnimId);
-
   if (humidity <= humidityThresholdLow && digitalRead(humidifierRelayPin) == HIGH) {
     digitalWrite(humidifierRelayPin, LOW);
     byte humAnimId = 0;
@@ -158,6 +155,20 @@ void loop() {
   else if (humidity >= humidityThresholdHigh && digitalRead(humidifierRelayPin) == LOW) {
     digitalWrite(humidifierRelayPin, HIGH);
     lcd.setCursor(2, 3);
+    lcd.print(" ");
+  }
+
+  if (temperature >= temperatureThresholdHigh && digitalRead(fanRelayPin) == HIGH) {
+    digitalWrite(fanRelayPin, LOW);
+    byte fanAnimId = 1;
+    lcd.createChar(fanAnimId, fanAnim[actCycle % 3]);
+  
+    lcd.setCursor(5, 3);
+    lcd.write(fanAnimId);
+  }
+  else if (temperature <= temperatureThresholdLow && digitalRead(fanRelayPin) == LOW) {
+    digitalWrite(fanRelayPin, HIGH);
+    lcd.setCursor(5, 3);
     lcd.print(" ");
   }
   
