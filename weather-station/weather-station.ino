@@ -29,10 +29,20 @@ int actCycle = samplingCycle;
 float temperature = 0.0;
 float pressure = 0.0;
 float humidity = 0.0;
-
+byte humidifierRelayPin = D6;
+float humidityThresholdLow = 30.0;
+float humidityThresholdHigh = 60.0;
+byte fanRelayPin = D5;
+float temperatureThresholdLow = 22.0;
+float temperatureThresholdHigh = 25.0;
 
 
 void setup() {
+  pinMode(humidifierRelayPin, OUTPUT);
+  digitalWrite(humidifierRelayPin, HIGH);
+  pinMode(fanRelayPin, OUTPUT);
+  digitalWrite(fanRelayPin, HIGH);
+  
   Serial.begin(115200);
   Serial.println("Booting");
   Wire.begin(D2, D1); // D1 - SCL, D2 - SDA
@@ -134,26 +144,53 @@ void loop() {
     lcd.print(" ");
   }
 
-  byte humAnimId = 0;
-  lcd.createChar(humAnimId, humAnim[actCycle]);
-  
-  lcd.setCursor(2, 3);
-  lcd.write(humAnimId);
+  if (humidity <= humidityThresholdLow) {
+    // Turn on humidifier
+    if (digitalRead(humidifierRelayPin) == HIGH) {
+      digitalWrite(humidifierRelayPin, LOW);  
+    }
 
-  byte fanAnimId = 1;
-  lcd.createChar(fanAnimId, fanAnim[actCycle % 3]);
-  
-  lcd.setCursor(5, 3);
-  lcd.write(fanAnimId);
+    // Animation for humidifier
+    byte humAnimId = 0;
+    lcd.createChar(humAnimId, humAnim[actCycle]);
+    lcd.setCursor(2, 3);
+    lcd.write(humAnimId);
+  }
+  else if (humidity >= humidityThresholdHigh && digitalRead(humidifierRelayPin) == LOW) {
+    // Turn off humidifier, clear animation position on LCD
+    digitalWrite(humidifierRelayPin, HIGH);
+    lcd.setCursor(2, 3);
+    lcd.print(" ");
+  }
 
-  delay(startTime + refresh_time - millis());
+  if (temperature >= temperatureThresholdHigh) {
+    // Turn on fan
+    if (digitalRead(fanRelayPin) == HIGH) {
+      digitalWrite(fanRelayPin, LOW);  
+    }
+    
+    // Animation for fan
+    byte fanAnimId = 1;
+    lcd.createChar(fanAnimId, fanAnim[actCycle % 3]);
+    lcd.setCursor(5, 3);
+    lcd.write(fanAnimId);
+  }
+  else if (temperature <= temperatureThresholdLow && digitalRead(fanRelayPin) == LOW) {
+    // Turn off fan, clear animation position on LCD
+    digitalWrite(fanRelayPin, HIGH);
+    lcd.setCursor(5, 3);
+    lcd.print(" ");
+  }
+  
   ArduinoOTA.handle();
   if (actCycle == samplingCycle) {
     actCycle = 0;
   }
   else {
-    actCycle++;  
+    actCycle++;
   }
+  delay(startTime + refresh_time - millis());
+  
 }
 
 // Formatted print for showing data as "Prop: ValueUnit"
