@@ -29,10 +29,10 @@ int actCycle = samplingCycle;
 float temperature = 0.0;
 float pressure = 0.0;
 float humidity = 0.0;
-byte humidifierRelayPin = D5;
+byte humidifierRelayPin = D6;
 float humidityThresholdLow = 30.0;
 float humidityThresholdHigh = 60.0;
-byte fanRelayPin = D6;
+byte fanRelayPin = D5;
 float temperatureThresholdLow = 22.0;
 float temperatureThresholdHigh = 25.0;
 
