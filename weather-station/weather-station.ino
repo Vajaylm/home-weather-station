@@ -67,70 +67,36 @@ void loop() {
   
   if (bmeRunning) {
     if (actCycle == samplingCycle) {
-      temperature = bme.readTemperature();
-      pressure = bme.readPressure() / 100.0F;
-      humidity = bme.readHumidity();
+      ReadSensorData();
     }
-    FormattedDataPrint("Temperature", temperature, "C", SERIAL_PRINT);
-    FormattedDataPrint("Pressure", pressure, "hPa", SERIAL_PRINT);
-    FormattedDataPrint("Humidity", humidity, "%", SERIAL_PRINT);
-    Serial.println("----------------------------");
-    lcd.setCursor(0, 1);
-    FormattedDataPrint("T", temperature, "C", I2C_PRINT);
-    lcd.print("  ");
-    FormattedDataPrint("h", humidity, "%", I2C_PRINT);
-    lcd.setCursor(0, 2);
-    FormattedDataPrint("p", pressure, "hPa", I2C_PRINT);
-    lcd.print(" ");
+    PrintSensorData();
   }
 
   if (humidity <= humidityThresholdLow) {
-    // Turn on humidifier
-    if (digitalRead(humidifierRelayPin) == HIGH) {
-      digitalWrite(humidifierRelayPin, LOW);  
-    }
+    ActivateRelay(humidifierRelayPin);
 
-    // Animation for humidifier
     byte humAnimId = 0;
-    lcd.createChar(humAnimId, humAnim[actCycle]);
-    lcd.setCursor(2, 3);
-    lcd.write(humAnimId);
+    LcdAnimation(humAnimId, 2, 3, humAnim, actCycle);
   }
   else if (humidity >= humidityThresholdHigh && digitalRead(humidifierRelayPin) == LOW) {
-    // Turn off humidifier, clear animation position on LCD
-    digitalWrite(humidifierRelayPin, HIGH);
-    lcd.setCursor(2, 3);
-    lcd.print(" ");
+    DeactivateRelay(humidifierRelayPin);
+    CleanupLcd(2, 3);
   }
 
   if (temperature >= temperatureThresholdHigh) {
-    // Turn on fan
-    if (digitalRead(fanRelayPin) == HIGH) {
-      digitalWrite(fanRelayPin, LOW);  
-    }
+    ActivateRelay(fanRelayPin);
     
-    // Animation for fan
     byte fanAnimId = 1;
-    lcd.createChar(fanAnimId, fanAnim[actCycle % 3]);
-    lcd.setCursor(5, 3);
-    lcd.write(fanAnimId);
+    LcdAnimation(fanAnimId, 5, 3, fanAnim, actCycle % 3);
   }
   else if (temperature <= temperatureThresholdLow && digitalRead(fanRelayPin) == LOW) {
-    // Turn off fan, clear animation position on LCD
-    digitalWrite(fanRelayPin, HIGH);
-    lcd.setCursor(5, 3);
-    lcd.print(" ");
+    DeactivateRelay(fanRelayPin);
+    CleanupLcd(5, 3);
   }
   
   ArduinoOTA.handle();
-  if (actCycle == samplingCycle) {
-    actCycle = 0;
-  }
-  else {
-    actCycle++;
-  }
+  SetActCycle();
   delay(startTime + refresh_time - millis());
-  
 }
 
 // Formatted print for showing data as "Prop: ValueUnit"
@@ -275,4 +241,54 @@ void PrintDateTime(DateTime now) {
   DatePrint(now, I2C_PRINT);
   lcd.print("  ");
   TimePrint(now, I2C_PRINT);
+}
+
+void ReadSensorData() {
+  temperature = bme.readTemperature();
+  pressure = bme.readPressure() / 100.0F;
+  humidity = bme.readHumidity();
+}
+
+void PrintSensorData() {
+  FormattedDataPrint("Temperature", temperature, "C", SERIAL_PRINT);
+  FormattedDataPrint("Pressure", pressure, "hPa", SERIAL_PRINT);
+  FormattedDataPrint("Humidity", humidity, "%", SERIAL_PRINT);
+  Serial.println("----------------------------");
+  lcd.setCursor(0, 1);
+  FormattedDataPrint("T", temperature, "C", I2C_PRINT);
+  lcd.print("  ");
+  FormattedDataPrint("h", humidity, "%", I2C_PRINT);
+  lcd.setCursor(0, 2);
+  FormattedDataPrint("p", pressure, "hPa", I2C_PRINT);
+  lcd.print(" ");
+}
+
+void ActivateRelay(byte relayPin) {
+  if (digitalRead(relayPin) == HIGH) {
+    digitalWrite(relayPin, LOW);  
+  }
+}
+
+void DeactivateRelay(byte relayPin) {
+  digitalWrite(relayPin, HIGH);
+}
+
+void LcdAnimation(byte animId, byte col, byte row, byte anim[][8], byte animIdx) {
+  lcd.createChar(animId, anim[animIdx]);
+  lcd.setCursor(col, row);
+  lcd.write(animId);
+}
+
+void CleanupLcd(byte col, byte row) {
+  lcd.setCursor(col, row);
+  lcd.print(" ");
+}
+
+void SetActCycle() {
+  if (actCycle == samplingCycle) {
+    actCycle = 0;
+  }
+  else {
+    actCycle++;
+  }
 }
