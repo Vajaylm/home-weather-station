@@ -38,30 +38,125 @@ float temperatureThresholdHigh = 25.0;
 
 
 void setup() {
-  pinMode(humidifierRelayPin, OUTPUT);
-  digitalWrite(humidifierRelayPin, HIGH);
-  pinMode(fanRelayPin, OUTPUT);
-  digitalWrite(fanRelayPin, HIGH);
-  
   Serial.begin(115200);
   Serial.println("Booting");
   Wire.begin(D2, D1); // D1 - SCL, D2 - SDA
 
+  InitRelay(humidifierRelayPin);
+  InitRelay(fanRelayPin);
+  
+  InitWifi();
+  InitOTA();
+  
+  InitRtc();
+  InitBmeSensor();  
+  InitLcd();
+
+  Serial.println("Ready");
+  Serial.print("IP address: ");
+  Serial.println(WiFi.localIP());
+}
+
+void loop() {
+  long startTime = millis();
+  
+  if (rtcRunning) {
+    DateTime now = rtc.now();
+    PrintDateTime(now);
+  }
+  
+  if (bmeRunning) {
+    if (actCycle == samplingCycle) {
+      ReadSensorData();
+    }
+    PrintSensorData();
+  }
+
+  if (humidity <= humidityThresholdLow) {
+    ActivateRelay(humidifierRelayPin);
+
+    byte humAnimId = 0;
+    LcdAnimation(humAnimId, 2, 3, humAnim, actCycle);
+  }
+  else if (humidity >= humidityThresholdHigh && digitalRead(humidifierRelayPin) == LOW) {
+    DeactivateRelay(humidifierRelayPin);
+    CleanupLcd(2, 3);
+  }
+
+  if (temperature >= temperatureThresholdHigh) {
+    ActivateRelay(fanRelayPin);
+    
+    byte fanAnimId = 1;
+    LcdAnimation(fanAnimId, 5, 3, fanAnim, actCycle % 3);
+  }
+  else if (temperature <= temperatureThresholdLow && digitalRead(fanRelayPin) == LOW) {
+    DeactivateRelay(fanRelayPin);
+    CleanupLcd(5, 3);
+  }
+  
+  ArduinoOTA.handle();
+  SetActCycle();
+  delay(startTime + refresh_time - millis());
+}
+
+// Formatted print for showing data as "Prop: ValueUnit"
+void FormattedDataPrint(String prop, float value, String valUnit, int printMode) {
+  String dataString = prop + ": " + value + valUnit;
+  PrintData(dataString, printMode);
+}
+
+// Formatted print for showing date as "YYYY.MM.DD"
+void DatePrint(DateTime actDateTime, int printMode) {
+  String dataString = String(actDateTime.year(), DEC) + "." + TwoDigitFormatter(actDateTime.month()) + "." + TwoDigitFormatter(actDateTime.day());
+  PrintData(dataString, printMode);
+}
+
+// Formatted print for showing time as "HH:MM:SS"
+void TimePrint(DateTime actDateTime, int printMode) {
+  String dataString = TwoDigitFormatter(actDateTime.hour()) + ":" + TwoDigitFormatter(actDateTime.minute()) + ":" + TwoDigitFormatter(actDateTime.second());
+  PrintData(dataString, printMode);  
+}
+
+String TwoDigitFormatter(int value) {
+  return value < 10 ? "0" + String(value) : String(value);
+}
+
+void PrintData(String dataString, int printMode) {
+  if (printMode == SERIAL_PRINT) {
+    Serial.println(dataString);
+  }
+  else if (printMode == I2C_PRINT) {
+    lcd.print(dataString);
+  }
+}
+
+void InitRelay(byte relayPin) {
+  pinMode(relayPin, OUTPUT);
+  digitalWrite(relayPin, HIGH);
+}
+
+void InitRtc() {
   rtc.begin();
   if (!rtc.isrunning()) {
     Serial.println("RTC is NOT running!");
     rtcRunning = false;
     rtc.adjust(DateTime(__DATE__, __TIME__));
   }
+}
   
+void InitBmeSensor() {
   if (!bme.begin(0x76)) {
     Serial.println("Could not find BME280 sensor!");
     bmeRunning = false;
   }
+}
 
+void InitLcd() {
   lcd.init();
   lcd.backlight();
-  
+}
+
+void InitWifi() {
   WiFi.mode(WIFI_STA);
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
   
@@ -70,7 +165,9 @@ void setup() {
     delay(5000);
     ESP.restart();
   }
+}
 
+void InitOTA() {
   ArduinoOTA.setHostname(HOST_NAME);
   ArduinoOTA.setPassword(HOST_PASSWORD);
   
@@ -82,15 +179,17 @@ void setup() {
       type = "filesystem";
     }
 
-    // NOTE: if updating FS this would be the place to unmount FS using FS.end()
     Serial.println("Start updating " + type);
   });
+  
   ArduinoOTA.onEnd([]() {
     Serial.println("\nEnd");
   });
+  
   ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
     Serial.printf("Progress: %u%%\r", (progress / (total / 100)));
   });
+  
   ArduinoOTA.onError([](ota_error_t error) {
     Serial.printf("Error[%u]: ", error);
     if (error == OTA_AUTH_ERROR) {
@@ -105,147 +204,65 @@ void setup() {
       Serial.println("End Failed");
     }
   });
+  
   ArduinoOTA.begin();
-  Serial.println("Ready");
-  Serial.print("IP address: ");
-  Serial.println(WiFi.localIP());
 }
 
-void loop() {
-  long startTime = millis();
-  
-  if (rtcRunning) {
-    DateTime now = rtc.now();
-    DatePrint(now, SERIAL_PRINT);
-    TimePrint(now, SERIAL_PRINT);
-    lcd.setCursor(0, 0);
-    DatePrint(now, I2C_PRINT);
-    lcd.print("  ");
-    TimePrint(now, I2C_PRINT);
-  }
-  
-  if (bmeRunning) {
-    if (actCycle == samplingCycle) {
-      //actCycle = 0;
-      temperature = bme.readTemperature();
-      pressure = bme.readPressure() / 100.0F;
-      humidity = bme.readHumidity();
-    }
-    FormattedDataPrint("Temperature", temperature, "C", SERIAL_PRINT);
-    FormattedDataPrint("Pressure", pressure, "hPa", SERIAL_PRINT);
-    FormattedDataPrint("Humidity", humidity, "%", SERIAL_PRINT);
-    Serial.println("----------------------------");
-    lcd.setCursor(0, 1);
-    FormattedDataPrint("T", temperature, "C", I2C_PRINT);
-    lcd.print("  ");
-    FormattedDataPrint("h", humidity, "%", I2C_PRINT);
-    lcd.setCursor(0, 2);
-    FormattedDataPrint("p", pressure, "hPa", I2C_PRINT);
-    lcd.print(" ");
-  }
+void PrintDateTime(DateTime now) {
+  DatePrint(now, SERIAL_PRINT);
+  TimePrint(now, SERIAL_PRINT);
+  lcd.setCursor(0, 0);
+  DatePrint(now, I2C_PRINT);
+  lcd.print("  ");
+  TimePrint(now, I2C_PRINT);
+}
 
-  if (humidity <= humidityThresholdLow) {
-    // Turn on humidifier
-    if (digitalRead(humidifierRelayPin) == HIGH) {
-      digitalWrite(humidifierRelayPin, LOW);  
-    }
+void ReadSensorData() {
+  temperature = bme.readTemperature();
+  pressure = bme.readPressure() / 100.0F;
+  humidity = bme.readHumidity();
+}
 
-    // Animation for humidifier
-    byte humAnimId = 0;
-    lcd.createChar(humAnimId, humAnim[actCycle]);
-    lcd.setCursor(2, 3);
-    lcd.write(humAnimId);
-  }
-  else if (humidity >= humidityThresholdHigh && digitalRead(humidifierRelayPin) == LOW) {
-    // Turn off humidifier, clear animation position on LCD
-    digitalWrite(humidifierRelayPin, HIGH);
-    lcd.setCursor(2, 3);
-    lcd.print(" ");
-  }
+void PrintSensorData() {
+  FormattedDataPrint("Temperature", temperature, "C", SERIAL_PRINT);
+  FormattedDataPrint("Pressure", pressure, "hPa", SERIAL_PRINT);
+  FormattedDataPrint("Humidity", humidity, "%", SERIAL_PRINT);
+  Serial.println("----------------------------");
+  lcd.setCursor(0, 1);
+  FormattedDataPrint("T", temperature, "C", I2C_PRINT);
+  lcd.print("  ");
+  FormattedDataPrint("h", humidity, "%", I2C_PRINT);
+  lcd.setCursor(0, 2);
+  FormattedDataPrint("p", pressure, "hPa", I2C_PRINT);
+  lcd.print(" ");
+}
 
-  if (temperature >= temperatureThresholdHigh) {
-    // Turn on fan
-    if (digitalRead(fanRelayPin) == HIGH) {
-      digitalWrite(fanRelayPin, LOW);  
-    }
-    
-    // Animation for fan
-    byte fanAnimId = 1;
-    lcd.createChar(fanAnimId, fanAnim[actCycle % 3]);
-    lcd.setCursor(5, 3);
-    lcd.write(fanAnimId);
+void ActivateRelay(byte relayPin) {
+  if (digitalRead(relayPin) == HIGH) {
+    digitalWrite(relayPin, LOW);  
   }
-  else if (temperature <= temperatureThresholdLow && digitalRead(fanRelayPin) == LOW) {
-    // Turn off fan, clear animation position on LCD
-    digitalWrite(fanRelayPin, HIGH);
-    lcd.setCursor(5, 3);
-    lcd.print(" ");
-  }
-  
-  ArduinoOTA.handle();
+}
+
+void DeactivateRelay(byte relayPin) {
+  digitalWrite(relayPin, HIGH);
+}
+
+void LcdAnimation(byte animId, byte col, byte row, byte anim[][8], byte animIdx) {
+  lcd.createChar(animId, anim[animIdx]);
+  lcd.setCursor(col, row);
+  lcd.write(animId);
+}
+
+void CleanupLcd(byte col, byte row) {
+  lcd.setCursor(col, row);
+  lcd.print(" ");
+}
+
+void SetActCycle() {
   if (actCycle == samplingCycle) {
     actCycle = 0;
   }
   else {
     actCycle++;
   }
-  delay(startTime + refresh_time - millis());
-  
-}
-
-// Formatted print for showing data as "Prop: ValueUnit"
-void FormattedDataPrint(String prop, float value, String valUnit, int printMode) {
-  if (printMode == SERIAL_PRINT) {
-    Serial.print(prop);
-    Serial.print(": ");
-    Serial.print(value);
-    Serial.println(valUnit);
-  }
-  else if (printMode == I2C_PRINT) {
-    lcd.print(prop);
-    lcd.print(": ");
-    lcd.print(value);
-    lcd.print(valUnit);
-  }
-}
-
-// Formatted print for showing date as "YYYY.MM.DD"
-void DatePrint(DateTime actDateTime, int printMode) {
-  if (printMode == SERIAL_PRINT) {
-    Serial.print(actDateTime.year(), DEC);
-    Serial.print('.');
-    Serial.print(TwoDigitFormatter(actDateTime.month()));
-    Serial.print('.');
-    Serial.println(TwoDigitFormatter(actDateTime.day()));
-  }
-  else if (printMode == I2C_PRINT) {
-    lcd.print(actDateTime.year(), DEC);
-    lcd.print('.');
-    lcd.print(TwoDigitFormatter(actDateTime.month()));
-    lcd.print('.');
-    lcd.print(TwoDigitFormatter(actDateTime.day()));
-  }
-}
-
-// Formatted print for showing time as "HH:MM:SS"
-void TimePrint(DateTime actDateTime, int printMode) {
-  if (printMode == SERIAL_PRINT) {
-    Serial.print(TwoDigitFormatter(actDateTime.hour()));
-    Serial.print(':');
-    Serial.print(TwoDigitFormatter(actDateTime.minute()));
-    Serial.print(':');
-    Serial.print(TwoDigitFormatter(actDateTime.second()));  
-    Serial.println();
-  }
-  else if (printMode == I2C_PRINT) {
-    lcd.print(TwoDigitFormatter(actDateTime.hour()));
-    lcd.print(':');
-    lcd.print(TwoDigitFormatter(actDateTime.minute()));
-    lcd.print(':');
-    lcd.print(TwoDigitFormatter(actDateTime.second()));
-  }
-}
-
-String TwoDigitFormatter(int value) {
-  return value < 10 ? "0" + String(value) : String(value);
 }
