@@ -1,0 +1,4 @@
+#define WIFI_SSID "Your SSID"
+#define WIFI_PASSWORD "Your Password"
+#define HOST_NAME "Your host name"
+#define HOST_PASSWORD "Password for Host"
