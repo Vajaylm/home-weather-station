@@ -101,59 +101,33 @@ void loop() {
 
 // Formatted print for showing data as "Prop: ValueUnit"
 void FormattedDataPrint(String prop, float value, String valUnit, int printMode) {
-  if (printMode == SERIAL_PRINT) {
-    Serial.print(prop);
-    Serial.print(": ");
-    Serial.print(value);
-    Serial.println(valUnit);
-  }
-  else if (printMode == I2C_PRINT) {
-    lcd.print(prop);
-    lcd.print(": ");
-    lcd.print(value);
-    lcd.print(valUnit);
-  }
+  String dataString = prop + ": " + value + valUnit;
+  PrintData(dataString, printMode);
 }
 
 // Formatted print for showing date as "YYYY.MM.DD"
 void DatePrint(DateTime actDateTime, int printMode) {
-  if (printMode == SERIAL_PRINT) {
-    Serial.print(actDateTime.year(), DEC);
-    Serial.print('.');
-    Serial.print(TwoDigitFormatter(actDateTime.month()));
-    Serial.print('.');
-    Serial.println(TwoDigitFormatter(actDateTime.day()));
-  }
-  else if (printMode == I2C_PRINT) {
-    lcd.print(actDateTime.year(), DEC);
-    lcd.print('.');
-    lcd.print(TwoDigitFormatter(actDateTime.month()));
-    lcd.print('.');
-    lcd.print(TwoDigitFormatter(actDateTime.day()));
-  }
+  String dataString = String(actDateTime.year(), DEC) + "." + TwoDigitFormatter(actDateTime.month()) + "." + TwoDigitFormatter(actDateTime.day());
+  PrintData(dataString, printMode);
 }
 
 // Formatted print for showing time as "HH:MM:SS"
 void TimePrint(DateTime actDateTime, int printMode) {
-  if (printMode == SERIAL_PRINT) {
-    Serial.print(TwoDigitFormatter(actDateTime.hour()));
-    Serial.print(':');
-    Serial.print(TwoDigitFormatter(actDateTime.minute()));
-    Serial.print(':');
-    Serial.print(TwoDigitFormatter(actDateTime.second()));  
-    Serial.println();
-  }
-  else if (printMode == I2C_PRINT) {
-    lcd.print(TwoDigitFormatter(actDateTime.hour()));
-    lcd.print(':');
-    lcd.print(TwoDigitFormatter(actDateTime.minute()));
-    lcd.print(':');
-    lcd.print(TwoDigitFormatter(actDateTime.second()));
-  }
+  String dataString = TwoDigitFormatter(actDateTime.hour()) + ":" + TwoDigitFormatter(actDateTime.minute()) + ":" + TwoDigitFormatter(actDateTime.second());
+  PrintData(dataString, printMode);  
 }
 
 String TwoDigitFormatter(int value) {
   return value < 10 ? "0" + String(value) : String(value);
+}
+
+void PrintData(String dataString, int printMode) {
+  if (printMode == SERIAL_PRINT) {
+    Serial.println(dataString);
+  }
+  else if (printMode == I2C_PRINT) {
+    lcd.print(dataString);
+  }
 }
 
 void InitRelay(byte relayPin) {
