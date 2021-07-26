@@ -38,74 +38,20 @@ float temperatureThresholdHigh = 25.0;
 
 
 void setup() {
-  pinMode(humidifierRelayPin, OUTPUT);
-  digitalWrite(humidifierRelayPin, HIGH);
-  pinMode(fanRelayPin, OUTPUT);
-  digitalWrite(fanRelayPin, HIGH);
-  
   Serial.begin(115200);
   Serial.println("Booting");
   Wire.begin(D2, D1); // D1 - SCL, D2 - SDA
 
-  rtc.begin();
-  if (!rtc.isrunning()) {
-    Serial.println("RTC is NOT running!");
-    rtcRunning = false;
-    rtc.adjust(DateTime(__DATE__, __TIME__));
-  }
+  InitRelay(humidifierRelayPin);
+  InitRelay(fanRelayPin);
   
-  if (!bme.begin(0x76)) {
-    Serial.println("Could not find BME280 sensor!");
-    bmeRunning = false;
-  }
+  InitWifi();
+  InitOTA();
+  
+  InitRtc();
+  InitBmeSensor();  
+  InitLcd();
 
-  lcd.init();
-  lcd.backlight();
-  
-  WiFi.mode(WIFI_STA);
-  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-  
-  while (WiFi.waitForConnectResult() != WL_CONNECTED) {
-    Serial.println("Connection Failed! Rebooting...");
-    delay(5000);
-    ESP.restart();
-  }
-
-  ArduinoOTA.setHostname(HOST_NAME);
-  ArduinoOTA.setPassword(HOST_PASSWORD);
-  
-  ArduinoOTA.onStart([]() {
-    String type;
-    if (ArduinoOTA.getCommand() == U_FLASH) {
-      type = "sketch";
-    } else { // U_FS
-      type = "filesystem";
-    }
-
-    // NOTE: if updating FS this would be the place to unmount FS using FS.end()
-    Serial.println("Start updating " + type);
-  });
-  ArduinoOTA.onEnd([]() {
-    Serial.println("\nEnd");
-  });
-  ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
-    Serial.printf("Progress: %u%%\r", (progress / (total / 100)));
-  });
-  ArduinoOTA.onError([](ota_error_t error) {
-    Serial.printf("Error[%u]: ", error);
-    if (error == OTA_AUTH_ERROR) {
-      Serial.println("Auth Failed");
-    } else if (error == OTA_BEGIN_ERROR) {
-      Serial.println("Begin Failed");
-    } else if (error == OTA_CONNECT_ERROR) {
-      Serial.println("Connect Failed");
-    } else if (error == OTA_RECEIVE_ERROR) {
-      Serial.println("Receive Failed");
-    } else if (error == OTA_END_ERROR) {
-      Serial.println("End Failed");
-    }
-  });
-  ArduinoOTA.begin();
   Serial.println("Ready");
   Serial.print("IP address: ");
   Serial.println(WiFi.localIP());
@@ -116,17 +62,11 @@ void loop() {
   
   if (rtcRunning) {
     DateTime now = rtc.now();
-    DatePrint(now, SERIAL_PRINT);
-    TimePrint(now, SERIAL_PRINT);
-    lcd.setCursor(0, 0);
-    DatePrint(now, I2C_PRINT);
-    lcd.print("  ");
-    TimePrint(now, I2C_PRINT);
+    PrintDateTime(now);
   }
   
   if (bmeRunning) {
     if (actCycle == samplingCycle) {
-      //actCycle = 0;
       temperature = bme.readTemperature();
       pressure = bme.readPressure() / 100.0F;
       humidity = bme.readHumidity();
@@ -248,4 +188,91 @@ void TimePrint(DateTime actDateTime, int printMode) {
 
 String TwoDigitFormatter(int value) {
   return value < 10 ? "0" + String(value) : String(value);
+}
+
+void InitRelay(byte relayPin) {
+  pinMode(relayPin, OUTPUT);
+  digitalWrite(relayPin, HIGH);
+}
+
+void InitRtc() {
+  rtc.begin();
+  if (!rtc.isrunning()) {
+    Serial.println("RTC is NOT running!");
+    rtcRunning = false;
+    rtc.adjust(DateTime(__DATE__, __TIME__));
+  }
+}
+  
+void InitBmeSensor() {
+  if (!bme.begin(0x76)) {
+    Serial.println("Could not find BME280 sensor!");
+    bmeRunning = false;
+  }
+}
+
+void InitLcd() {
+  lcd.init();
+  lcd.backlight();
+}
+
+void InitWifi() {
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+  
+  while (WiFi.waitForConnectResult() != WL_CONNECTED) {
+    Serial.println("Connection Failed! Rebooting...");
+    delay(5000);
+    ESP.restart();
+  }
+}
+
+void InitOTA() {
+  ArduinoOTA.setHostname(HOST_NAME);
+  ArduinoOTA.setPassword(HOST_PASSWORD);
+  
+  ArduinoOTA.onStart([]() {
+    String type;
+    if (ArduinoOTA.getCommand() == U_FLASH) {
+      type = "sketch";
+    } else { // U_FS
+      type = "filesystem";
+    }
+
+    Serial.println("Start updating " + type);
+  });
+  
+  ArduinoOTA.onEnd([]() {
+    Serial.println("\nEnd");
+  });
+  
+  ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
+    Serial.printf("Progress: %u%%\r", (progress / (total / 100)));
+  });
+  
+  ArduinoOTA.onError([](ota_error_t error) {
+    Serial.printf("Error[%u]: ", error);
+    if (error == OTA_AUTH_ERROR) {
+      Serial.println("Auth Failed");
+    } else if (error == OTA_BEGIN_ERROR) {
+      Serial.println("Begin Failed");
+    } else if (error == OTA_CONNECT_ERROR) {
+      Serial.println("Connect Failed");
+    } else if (error == OTA_RECEIVE_ERROR) {
+      Serial.println("Receive Failed");
+    } else if (error == OTA_END_ERROR) {
+      Serial.println("End Failed");
+    }
+  });
+  
+  ArduinoOTA.begin();
+}
+
+void PrintDateTime(DateTime now) {
+  DatePrint(now, SERIAL_PRINT);
+  TimePrint(now, SERIAL_PRINT);
+  lcd.setCursor(0, 0);
+  DatePrint(now, I2C_PRINT);
+  lcd.print("  ");
+  TimePrint(now, I2C_PRINT);
 }
