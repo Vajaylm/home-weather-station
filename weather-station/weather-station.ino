@@ -5,6 +5,7 @@
 #include <ArduinoOTA.h>
 #include "AuthOTA.h"
 #include "Animation.h"
+#include "RelayControl.h"
 
 // I2C related
 #include <Wire.h>
@@ -17,6 +18,8 @@
 RTC_DS1307 rtc;
 Adafruit_BME280 bme;
 LiquidCrystal_I2C lcd(0x27, 20, 4); 
+RelayControl fanControl(D5, 22.0, 25.0, true);
+RelayControl humidifierControl(D6, 30.0, 60.0, false);
 
 // Global variables
 #define SERIAL_PRINT 100000
@@ -29,21 +32,11 @@ int actCycle = samplingCycle;
 float temperature = 0.0;
 float pressure = 0.0;
 float humidity = 0.0;
-byte humidifierRelayPin = D6;
-float humidityThresholdLow = 30.0;
-float humidityThresholdHigh = 60.0;
-byte fanRelayPin = D5;
-float temperatureThresholdLow = 22.0;
-float temperatureThresholdHigh = 25.0;
-
 
 void setup() {
   Serial.begin(115200);
   Serial.println("Booting");
   Wire.begin(D2, D1); // D1 - SCL, D2 - SDA
-
-  InitRelay(humidifierRelayPin);
-  InitRelay(fanRelayPin);
   
   InitWifi();
   InitOTA();
@@ -72,28 +65,24 @@ void loop() {
     PrintSensorData();
   }
 
-  if (humidity <= humidityThresholdLow) {
-    ActivateRelay(humidifierRelayPin);
-
+  humidifierControl.handleSwitch(humidity, true);
+  if (humidifierControl.checkRelayActive()) {
     byte humAnimId = 0;
     LcdAnimation(humAnimId, 2, 3, humAnim, actCycle);
   }
-  else if (humidity >= humidityThresholdHigh && digitalRead(humidifierRelayPin) == LOW) {
-    DeactivateRelay(humidifierRelayPin);
+  else {
     CleanupLcd(2, 3);
   }
-
-  if (temperature >= temperatureThresholdHigh) {
-    ActivateRelay(fanRelayPin);
-    
+  
+  fanControl.handleSwitch(temperature, true);
+  if (fanControl.checkRelayActive()) {
     byte fanAnimId = 1;
     LcdAnimation(fanAnimId, 5, 3, fanAnim, actCycle % 3);
   }
-  else if (temperature <= temperatureThresholdLow && digitalRead(fanRelayPin) == LOW) {
-    DeactivateRelay(fanRelayPin);
+  else {
     CleanupLcd(5, 3);
   }
-  
+    
   ArduinoOTA.handle();
   SetActCycle();
   delay(startTime + refresh_time - millis());
@@ -128,11 +117,6 @@ void PrintData(String dataString, int printMode) {
   else if (printMode == I2C_PRINT) {
     lcd.print(dataString);
   }
-}
-
-void InitRelay(byte relayPin) {
-  pinMode(relayPin, OUTPUT);
-  digitalWrite(relayPin, HIGH);
 }
 
 void InitRtc() {
@@ -235,16 +219,6 @@ void PrintSensorData() {
   lcd.setCursor(0, 2);
   FormattedDataPrint("p", pressure, "hPa", I2C_PRINT);
   lcd.print(" ");
-}
-
-void ActivateRelay(byte relayPin) {
-  if (digitalRead(relayPin) == HIGH) {
-    digitalWrite(relayPin, LOW);  
-  }
-}
-
-void DeactivateRelay(byte relayPin) {
-  digitalWrite(relayPin, HIGH);
 }
 
 void LcdAnimation(byte animId, byte col, byte row, byte anim[][8], byte animIdx) {
