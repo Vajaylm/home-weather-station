@@ -1,11 +1,10 @@
 #include "RelayControl.h"
-#include "Relay.h"
 
-RelayControl::RelayControl(byte relayPin, float lowThreshold, float highThreshold, bool switchOnHigher) 
+RelayControl::RelayControl(byte relayPin, float lowThreshold, float highThreshold, SwitchMode switchMode) 
   : relay(relayPin) {
     this->lowThreshold = lowThreshold;
     this->highThreshold = highThreshold;
-    this->switchOnHigher = switchOnHigher;
+    this->switchMode = switchMode;
 }
 
 float RelayControl::getLowThreshold() {
@@ -32,23 +31,23 @@ bool RelayControl::checkValueLower(float value) {
   return value < lowThreshold;
 }
 
-void RelayControl::handleSwitch(float value, bool normOpen) {
-  if (switchOnHigher && checkValueHigher(value) && !checkRelayActive()) {
-    switchRelay(normOpen);
+void RelayControl::handleSwitch(float value, Connection conn) {
+  if (switchMode == HIGHER && checkValueHigher(value) && checkRelayActive() == Relay::COIL_OFF) {
+    switchRelay(conn == NORMALLY_OPEN ? Relay::COIL_ON : Relay::COIL_OFF);
   }
-  else if (switchOnHigher && checkValueLower(value) && checkRelayActive()) {
-    switchRelay(!normOpen);
+  else if (switchMode == HIGHER && checkValueLower(value) && checkRelayActive() == Relay::COIL_ON) {
+    switchRelay(conn == NORMALLY_CLOSED ? Relay::COIL_ON : Relay::COIL_OFF);
   }
-  else if (!switchOnHigher && checkValueHigher(value) && checkRelayActive()) {
-    switchRelay(!normOpen);      
+  else if (switchMode == LOWER && checkValueHigher(value) && checkRelayActive() == Relay::COIL_ON) {
+    switchRelay(conn == NORMALLY_CLOSED ? Relay::COIL_ON : Relay::COIL_OFF);
   }
-  else if (!switchOnHigher && checkValueLower(value) && !checkRelayActive()) {
-    switchRelay(normOpen);
+  else if (switchMode == LOWER && checkValueLower(value) && checkRelayActive() == Relay::COIL_OFF) {
+    switchRelay(conn == NORMALLY_OPEN ? Relay::COIL_ON : Relay::COIL_OFF);
   }
 }
 
-void RelayControl::switchRelay(bool state) {
-  if (state) {
+void RelayControl::switchRelay(Relay::CoilState state) {
+  if (state == Relay::COIL_ON) {
     relay.activate();  
   }
   else {
@@ -56,6 +55,6 @@ void RelayControl::switchRelay(bool state) {
   }
 }
 
-bool RelayControl::checkRelayActive() {
+Relay::CoilState RelayControl::checkRelayActive() {
   return relay.isActivated();
 }
