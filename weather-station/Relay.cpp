@@ -1,7 +1,7 @@
 #include "Relay.h"
 
-Relay::Relay(byte pin) {
-  this->pin = pin;
+Relay::Relay(byte pin) : pin(pin) {
+  activated = COIL_ON;
   init();
 }
 
@@ -11,23 +11,23 @@ void Relay::init() {
 }
 
 void Relay::activate() {
-  changeState(true);
+  changeState(COIL_ON);
 }
 
 void Relay::deactivate() {
-  changeState(false);
+  changeState(COIL_OFF);
 }
 
-void Relay::changeState(bool state) {
-  if (state && !activated) {
+void Relay::changeState(CoilState state) {
+  if (state == COIL_ON && activated == COIL_OFF) {
     digitalWrite(pin, LOW);
   }
-  else if (!state && activated) {
+  else if (state == COIL_OFF && activated == COIL_ON) {
     digitalWrite(pin, HIGH);
   }
   activated = state;
 }
 
-bool Relay::isActivated() {
+Relay::CoilState Relay::isActivated() {
   return activated;
 }

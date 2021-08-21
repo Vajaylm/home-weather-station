@@ -5,20 +5,25 @@
 
 // The relays for which this class is created must get LOW on input to activate
 class Relay {
+  public:
+    enum CoilState {
+      COIL_ON,
+      COIL_OFF
+    };
   
   private:
-    byte pin;
-    bool activated = false;
+    const byte pin;
+    CoilState activated;
     
   public:
     Relay(byte pin);
     void activate();
     void deactivate();
-    bool isActivated();
+    CoilState isActivated();
 
   private:
     void init();
-    void changeState(bool state);
+    void changeState(CoilState state);
 };
 
 #endif
