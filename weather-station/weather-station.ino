@@ -18,8 +18,8 @@
 RTC_DS1307 rtc;
 Adafruit_BME280 bme;
 LiquidCrystal_I2C lcd(0x27, 20, 4); 
-RelayControl fanControl(D5, 22.0, 25.0, true);
-RelayControl humidifierControl(D6, 30.0, 60.0, false);
+RelayControl fanControl(D5, 22.0, 25.0, RelayControl::HIGHER);
+RelayControl humidifierControl(D6, 30.0, 60.0, RelayControl::LOWER);
 
 // Global variables
 #define SERIAL_PRINT 100000
@@ -65,8 +65,8 @@ void loop() {
     PrintSensorData();
   }
 
-  humidifierControl.handleSwitch(humidity, true);
-  if (humidifierControl.checkRelayActive()) {
+  humidifierControl.handleSwitch(humidity, RelayControl::NORMALLY_OPEN);
+  if (humidifierControl.checkRelayActive() == Relay::COIL_ON) {
     byte humAnimId = 0;
     LcdAnimation(humAnimId, 2, 3, humAnim, actCycle);
   }
@@ -74,8 +74,8 @@ void loop() {
     CleanupLcd(2, 3);
   }
   
-  fanControl.handleSwitch(temperature, true);
-  if (fanControl.checkRelayActive()) {
+  fanControl.handleSwitch(temperature, RelayControl::NORMALLY_OPEN);
+  if (fanControl.checkRelayActive() == Relay::COIL_ON) {
     byte fanAnimId = 1;
     LcdAnimation(fanAnimId, 5, 3, fanAnim, actCycle % 3);
   }
