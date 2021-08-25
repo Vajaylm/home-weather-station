@@ -6,6 +6,7 @@
 #include "AuthOTA.h"
 #include "Animation.h"
 #include "RelayControl.h"
+#include "RtcModule.h"
 
 // I2C related
 #include <Wire.h>
@@ -15,7 +16,7 @@
 #include <LiquidCrystal_I2C.h>
 
 // Instance creation
-RTC_DS1307 rtc;
+RtcModule rtc;
 Adafruit_BME280 bme;
 LiquidCrystal_I2C lcd(0x27, 20, 4); 
 RelayControl fanControl(D5, 22.0, 25.0, RelayControl::HIGHER);
@@ -24,7 +25,6 @@ RelayControl humidifierControl(D6, 30.0, 60.0, RelayControl::LOWER);
 // Global variables
 #define SERIAL_PRINT 100000
 #define I2C_PRINT 100001
-bool rtcRunning = true;
 bool bmeRunning = true;
 int refresh_time = 1000; //ms
 int samplingCycle = 5;
@@ -53,10 +53,7 @@ void setup() {
 void loop() {
   long startTime = millis();
   
-  if (rtcRunning) {
-    DateTime now = rtc.now();
-    PrintDateTime(now);
-  }
+  PrintDateTime(rtc.getFormattedDate(), rtc.getFormattedTime());
   
   if (bmeRunning) {
     if (actCycle == samplingCycle) {
@@ -94,38 +91,8 @@ void FormattedDataPrint(String prop, float value, String valUnit, int printMode)
   PrintData(dataString, printMode);
 }
 
-// Formatted print for showing date as "YYYY.MM.DD"
-void DatePrint(DateTime actDateTime, int printMode) {
-  String dataString = String(actDateTime.year(), DEC) + "." + TwoDigitFormatter(actDateTime.month()) + "." + TwoDigitFormatter(actDateTime.day());
-  PrintData(dataString, printMode);
-}
-
-// Formatted print for showing time as "HH:MM:SS"
-void TimePrint(DateTime actDateTime, int printMode) {
-  String dataString = TwoDigitFormatter(actDateTime.hour()) + ":" + TwoDigitFormatter(actDateTime.minute()) + ":" + TwoDigitFormatter(actDateTime.second());
-  PrintData(dataString, printMode);  
-}
-
-String TwoDigitFormatter(int value) {
-  return value < 10 ? "0" + String(value) : String(value);
-}
-
-void PrintData(String dataString, int printMode) {
-  if (printMode == SERIAL_PRINT) {
-    Serial.println(dataString);
-  }
-  else if (printMode == I2C_PRINT) {
-    lcd.print(dataString);
-  }
-}
-
 void InitRtc() {
-  rtc.begin();
-  if (!rtc.isrunning()) {
-    Serial.println("RTC is NOT running!");
-    rtcRunning = false;
-    rtc.adjust(DateTime(__DATE__, __TIME__));
-  }
+  rtc.connect();
 }
   
 void InitBmeSensor() {
@@ -192,13 +159,22 @@ void InitOTA() {
   ArduinoOTA.begin();
 }
 
-void PrintDateTime(DateTime now) {
-  DatePrint(now, SERIAL_PRINT);
-  TimePrint(now, SERIAL_PRINT);
+void PrintDateTime(String dateString, String timeString) {
+  PrintData(dateString, SERIAL_PRINT);
+  PrintData(timeString, SERIAL_PRINT);
   lcd.setCursor(0, 0);
-  DatePrint(now, I2C_PRINT);
+  PrintData(dateString, I2C_PRINT);
   lcd.print("  ");
-  TimePrint(now, I2C_PRINT);
+  PrintData(timeString, I2C_PRINT);
+}
+
+void PrintData(String dataString, int printMode) {
+  if (printMode == SERIAL_PRINT) {
+    Serial.println(dataString);
+  }
+  else if (printMode == I2C_PRINT) {
+    lcd.print(dataString);
+  }
 }
 
 void ReadSensorData() {
